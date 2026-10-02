@@ -5,27 +5,40 @@ import math
 from collections import Counter
 from jobspy import scrape_jobs
 
-# Macro Jurisdictions & Economic Blocs (Broad Nationwide / Regional Crawl)
+# Pure EMEA Macro-Jurisdictions (Europe, Middle East, North Africa)
+# Regional Macro-Hubs & Dedicated Markets
 FINANCIAL_CENTRE_MAP = {
-    "United Kingdom": "uk",
-    "European Economic Area (EEA) - France": "france",
-    "European Economic Area (EEA) - Germany": "germany",
-    "European Economic Area (EEA) - Netherlands": "netherlands",
-    "European Economic Area (EEA) - Ireland": "ireland",
-    "European Economic Area (EEA) - Luxembourg / Belgium": "belgium",
-    "European Economic Area (EEA) - Italy": "italy",
-    "European Economic Area (EEA) - Spain": "spain",
-    "European Economic Area (EEA) - Nordics (Norway/Sweden)": "norway",
-    "Switzerland": "switzerland",
-    "Morocco": "morocco",
-    "United States": "usa",
-    "Canada": "canada",
-    "United Arab Emirates": "uae",
-    "Singapore": "singapore",
-    "Worldwide / Global Remote": "usa"
+    "United Kingdom": {
+        "label": "United Kingdom",
+        "indeed_code": "uk",
+        "scrape_locations": ["United Kingdom", "London"]
+    },
+    "Morocco": {
+        "label": "Morocco",
+        "indeed_code": "morocco",
+        "scrape_locations": ["Morocco", "Casablanca", "Rabat"]
+    },
+    "Europe (Whole Region)": {
+        "label": "Europe",
+        "indeed_code": "germany",
+        "scrape_locations": ["Europe", "Paris, France", "Frankfurt, Germany", "Amsterdam, Netherlands", "Zurich, Switzerland", "Luxembourg"]
+    },
+    "Gulf Countries (GCC: UAE, Qatar, Kuwait, KSA)": {
+        "label": "Gulf / Middle East",
+        "indeed_code": "uae",
+        "scrape_locations": ["United Arab Emirates", "Dubai", "Doha, Qatar", "Kuwait City, Kuwait", "Riyadh, Saudi Arabia"]
+    },
+    "United States": {
+        "label": "United States",
+        "indeed_code": "usa",
+        "scrape_locations": ["United States", "New York, NY", "Chicago, IL", "Boston, MA"]
+    },
+    "Canada": {
+        "label": "Canada",
+        "indeed_code": "canada",
+        "scrape_locations": ["Canada", "Toronto, ON", "Montreal, QC"]
+    }
 }
-
-# Institutional Quantitative, Actuarial & Risk Taxonomy
 INSTITUTIONAL_TAXONOMY = [
     # Actuarial Reserving & Solvency (P&C / Non-Life)
     "chain ladder", "london chain", "taylor separation", "mack stochastic",
@@ -42,12 +55,15 @@ INSTITUTIONAL_TAXONOMY = [
     "pandas", "numpy", "scikit-learn", "pca", "mca", "knn", "etl pipelines", "git"
 ]
 
+SENIORITY_KEYWORDS = {
+    "junior": ["graduate", "junior", "entry level", "intern", "stage", "trainee", "associate 1", "analyst 1", "0-2 years"],
+    "senior": ["senior", "lead", "principal", "manager", "head", "vp", "director", "5+ years", "7+ years"]
+}
+
 def tokenize(text: str) -> list:
-    """Extracts alphanumeric tokens of length >= 2."""
     return re.findall(r"\b[a-zA-Z0-9]{2,}\b", text.lower())
 
 def compute_cosine_similarity(query_text: str, doc_texts: list) -> np.ndarray:
-    """Pure-Python TF-IDF and Cosine Similarity (Zero C-Extension / DLL Dependencies)."""
     if not doc_texts:
         return np.array([])
 
@@ -80,94 +96,72 @@ def compute_cosine_similarity(query_text: str, doc_texts: list) -> np.ndarray:
     return np.array(similarities)
 
 def derive_requisition_archetypes(cv_text: str, custom_intent: str) -> list:
-    """Maps candidate competencies to tier-1 banking & actuarial search vectors."""
+    """Synthesizes search vectors taking into account seniority level and prompt keywords."""
     combined = f"{custom_intent} {cv_text}".lower()
     queries = []
 
+    # Detect if seeking early career/graduate/intern
+    is_early_career = any(k in combined for k in ["graduate", "junior", "entry level", "intern", "stage", "trainee"])
+    prefix = "Junior " if is_early_career else ""
+
     # Priority 1: Actuarial Reserving & Insurance Risk
     if any(k in combined for k in ["reserving", "actuarial", "claims", "chain ladder", "solvency", "ifrs"]):
-        queries.extend(["Actuarial Analyst", "Non-Life Reserving Analyst"])
+        queries.append(f"{prefix}Actuarial Analyst".strip())
+        queries.append("Non-Life Reserving Analyst")
 
     # Priority 2: Quantitative Risk Management & ALM
     if any(k in combined for k in ["quant", "monte carlo", "alm", "vasicek", "risk model", "stochastic"]):
-        queries.append("Quantitative Risk Analyst")
+        queries.append(f"{prefix}Quantitative Analyst".strip())
+        queries.append("Risk Analyst")
 
     # Priority 3: Credit Risk Analytics & Data Modeling
     if any(k in combined for k in ["credit risk", "risk analytics", "power bi", "data science"]):
         if len(queries) < 3:
-            queries.append("Risk Analytics Analyst")
+            queries.append("Quantitative Risk Analyst")
 
     if not queries:
-        queries = ["Quantitative Analyst", "Actuarial Analyst"]
+        queries = [f"{prefix}Quantitative Analyst".strip(), f"{prefix}Actuarial Analyst".strip()]
 
     return list(dict.fromkeys(queries))[:3]
-
-def extract_mandate_exclusions(intent_text: str) -> list:
-    """Parses structural negative constraints and functional exclusions."""
-    negatives = []
-    patterns = [
-        r"(?:no|avoid|exclude|not|without|don't want|do not want)\s+([a-zA-Z\s\-]+?)(?=[,\.\n]|$)"
-    ]
-    for p in patterns:
-        for match in re.findall(p, intent_text.lower()):
-            clean = match.strip()
-            if clean and len(clean) > 2:
-                negatives.append(clean)
-    return list(set(negatives))
 
 def fetch_platform_jobs_worldwide(
     search_term: str, 
     location: str = "", 
     country_choice: str = "United Kingdom", 
     is_remote: bool = False,
-    results_wanted: int = 20,
+    results_wanted: int = 15,
     hours_old: int = 168
 ) -> pd.DataFrame:
-    """Multi-threaded crawler with per-platform 429 rate-limit isolation."""
-    target_country = FINANCIAL_CENTRE_MAP.get(country_choice, "uk")
-    clean_country_name = country_choice.split(" - ")[-1].split(" (")[0]
+    """Scrapes aggregated jobs across UK, Morocco, Europe, or the Gulf region."""
+    region_info = FINANCIAL_CENTRE_MAP.get(
+        country_choice, 
+        FINANCIAL_CENTRE_MAP["United Kingdom"]
+    )
+    
+    collected_dfs = []
     
     if is_remote:
-        effective_loc = "Remote"
-    elif "Worldwide" in country_choice:
-        effective_loc = "Worldwide"
+        locations_to_query = ["Remote"]
     else:
-        effective_loc = clean_country_name
+        # Queries top target hubs (e.g. ['Morocco', 'Casablanca'] or ['United Kingdom', 'London'])
+        locations_to_query = region_info["scrape_locations"][:2]
 
-    collected_dfs = []
-
-    # 1. Primary Scrape: LinkedIn & Indeed (Resilient, reliable throughput)
-    try:
-        df_primary = scrape_jobs(
-            site_name=["linkedin", "indeed"],
-            search_term=search_term,
-            location=effective_loc,
-            results_wanted=results_wanted,
-            hours_old=hours_old,
-            country_indeed=target_country,
-            is_remote=is_remote,
-            linkedin_fetch_description=True
-        )
-        if df_primary is not None and not df_primary.empty:
-            collected_dfs.append(df_primary)
-    except Exception as e:
-        print(f"Primary board scrape notice ({search_term}): {e}")
-
-    # 2. Secondary Scrape: Glassdoor (Isolated against 429 rate limit blocks)
-    try:
-        df_glassdoor = scrape_jobs(
-            site_name=["glassdoor"],
-            search_term=search_term,
-            location=effective_loc,
-            results_wanted=min(results_wanted, 8),
-            hours_old=hours_old,
-            country_indeed=target_country,
-            is_remote=is_remote
-        )
-        if df_glassdoor is not None and not df_glassdoor.empty:
-            collected_dfs.append(df_glassdoor)
-    except Exception as e:
-        print(f"Glassdoor notice (429 rate-limit or timeout bypassed): {e}")
+    for loc in locations_to_query:
+        try:
+            df_primary = scrape_jobs(
+                site_name=["linkedin", "indeed"],
+                search_term=search_term,
+                location=loc,
+                results_wanted=results_wanted,
+                hours_old=hours_old,
+                country_indeed=region_info["indeed_code"],
+                is_remote=is_remote,
+                linkedin_fetch_description=True
+            )
+            if df_primary is not None and not df_primary.empty:
+                collected_dfs.append(df_primary)
+        except Exception as e:
+            print(f"Scraper notice for {search_term} in {loc}: {e}")
 
     if collected_dfs:
         combined = pd.concat(collected_dfs, ignore_index=True)
@@ -176,7 +170,6 @@ def fetch_platform_jobs_worldwide(
     return pd.DataFrame()
 
 def generate_institutional_tailoring(cv_skills: set, job_text: str, role_title: str) -> dict:
-    """Generates Workday/Taleo ATS token diffs and institutional bullet revisions."""
     text_l = job_text.lower()
     job_skills = [s for s in INSTITUTIONAL_TAXONOMY if s in text_l]
     missing = [s for s in job_skills if s not in cv_skills]
@@ -185,14 +178,14 @@ def generate_institutional_tailoring(cv_skills: set, job_text: str, role_title: 
     if missing:
         top_missing = missing[:3]
         actions.append(
-            f"**ATS Vector Alignment:** Inject tokens `{', '.join(top_missing)}` into your Core Quantitative Competencies section to clear Workday/Taleo semantic parsers."
+            f"**ATS Vector Alignment:** Inject tokens `{', '.join(top_missing)}` into your Core Quantitative Competencies section to clear ATS semantic filters."
         )
         actions.append(
-            f"**Metric-Driven Deliverable Statement:** Detail practical application of **{top_missing[0].upper()}** using standard banking notation (*Action Verb + Computational Engine + Metric Result*)."
+            f"**Metric-Driven Bullet Revision:** Highlight practical modeling in **{top_missing[0].upper()}** using quantitative metrics (*Action Verb + Computational Tool + Result achieved*)."
         )
     
     actions.append(
-        f"**Executive Requisition Match:** Align your summary header directly to **'{role_title}'** to pass initial human committee screening."
+        f"**Executive Requisition Match:** Align your resume headline directly to **'{role_title}'** for recruiter review."
     )
     
     return {
@@ -201,46 +194,79 @@ def generate_institutional_tailoring(cv_skills: set, job_text: str, role_title: 
     }
 
 def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFrame) -> pd.DataFrame:
-    """Institutional Candidate Scoring Model (ICSM) evaluating screening pass probability."""
+    """Calculates review odds considering skills, prompt intent, seniority level, and exclusions."""
     if jobs_df.empty:
         return jobs_df
 
     cv_text = cv_data.get("raw_text", "")
     user_skills = set(cv_data.get("skills", []))
-    custom_intent_clean = custom_intent.strip()
-    negative_rules = extract_mandate_exclusions(custom_intent_clean)
+    cv_seniority = cv_data.get("seniority", "Entry Level / Graduate").lower()
+    custom_intent_clean = custom_intent.strip().lower()
 
     searchable_texts = []
+    titles = []
     for _, row in jobs_df.iterrows():
-        title = str(row.get("title") or "")
-        company = str(row.get("company") or "")
-        desc = str(row.get("description") or "")
-        searchable_texts.append(f"{title} {title} {company} {desc}".strip())
+        t = str(row.get("title") or "")
+        c = str(row.get("company") or "")
+        d = str(row.get("description") or "")
+        titles.append(t.lower())
+        searchable_texts.append(f"{t} {t} {c} {d}".strip().lower())
 
-    # 1. Requisition Intent Correlation (35%)
+    # 1. Requisition Intent Correlation (30%)
     if custom_intent_clean:
         intent_sim = compute_cosine_similarity(custom_intent_clean, searchable_texts)
         intent_sim = np.clip(intent_sim, 0.0, 1.0)
     else:
         intent_sim = np.zeros(len(searchable_texts))
 
-    # 2. Competency Alpha (35%)
+    # 2. Competency Profile Correlation (30%)
     cv_sim = compute_cosine_similarity(cv_text, searchable_texts)
     cv_sim = np.clip(cv_sim, 0.0, 1.0)
 
-    # 3. Direct Taxonomy Overlap & Constraint Penalties (15%)
+    # 3. Direct Taxonomy Match, Seniority Fit & Exclusion Penalties
     taxonomy_scores = []
+    seniority_adjustments = []
     matched_skills_list = []
     tailoring_reports = []
     penalties = []
 
+    # Parse exclusions from user prompt
+    exclusions = []
+    for m in re.findall(r"(?:no|avoid|exclude|not|without|don't want)\s+([a-zA-Z\s\-]+?)(?=[,\.\n]|$)", custom_intent_clean):
+        if len(m.strip()) > 2:
+            exclusions.append(m.strip())
+
     for idx, text in enumerate(searchable_texts):
-        text_lower = text.lower()
-        matched = [s for s in user_skills if s in text_lower]
-        
+        matched = [s for s in user_skills if s in text]
         t_score = min(len(matched) / min(len(user_skills), 6), 1.0) if user_skills else 0.3
         taxonomy_scores.append(t_score)
         matched_skills_list.append(matched)
+
+        # Seniority Match Calibration
+        title_l = titles[idx]
+        sen_adj = 0.0
+        
+        # If candidate is Junior / Graduate
+        if any(g in cv_seniority for g in ["graduate", "junior", "intern", "entry"]):
+            if any(j in title_l or j in text[:300] for j in SENIORITY_KEYWORDS["junior"]):
+                sen_adj += 0.15  # Positive boost for matching early-career requisitions
+            elif any(s in title_l for s in ["senior", "lead", "director", "head", "vp"]):
+                sen_adj -= 0.35  # Penalty for senior roles that filter out juniors
+        # If candidate is Senior
+        elif "senior" in cv_seniority:
+            if any(s in title_l for s in SENIORITY_KEYWORDS["senior"]):
+                sen_adj += 0.15
+            elif any(j in title_l for j in ["intern", "graduate", "trainee"]):
+                sen_adj -= 0.25
+
+        seniority_adjustments.append(sen_adj)
+
+        # Negative Exclusion Rule Checking
+        penalty = 0.0
+        for excl in exclusions:
+            if excl in text:
+                penalty += 0.40
+        penalties.append(penalty)
 
         advice = generate_institutional_tailoring(
             cv_skills=user_skills,
@@ -249,40 +275,36 @@ def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFra
         )
         tailoring_reports.append(advice)
 
-        penalty = 0.0
-        for neg in negative_rules:
-            if len(neg) > 2 and neg in text_lower:
-                penalty += 0.40
-        penalties.append(penalty)
-
     # 4. Market Recency Alpha (15%)
     recency_boost = []
     for _, row in jobs_df.iterrows():
-        date_str = str(row.get("date_posted") or "").lower()
-        if any(t in date_str for t in ["today", "1 day", "24 hours"]):
+        d_post = str(row.get("date_posted") or "").lower()
+        if any(t in d_post for t in ["today", "1 day", "24 hours"]):
             recency_boost.append(0.15)
-        elif any(t in date_str for t in ["2 days", "3 days"]):
+        elif any(t in d_post for t in ["2 days", "3 days"]):
             recency_boost.append(0.08)
         else:
             recency_boost.append(0.0)
 
-    # Composite Probability Formula
+    # Final Composite Probability Calculation
     if custom_intent_clean:
         composite = (
-            intent_sim * 0.35 + 
-            cv_sim * 0.35 + 
+            intent_sim * 0.30 + 
+            cv_sim * 0.30 + 
             np.array(taxonomy_scores) * 0.15 + 
+            np.array(seniority_adjustments) +
             np.array(recency_boost) + 0.10 - 
             np.array(penalties)
         ) * 100
     else:
         composite = (
             cv_sim * 0.50 + 
-            np.array(taxonomy_scores) * 0.30 + 
+            np.array(taxonomy_scores) * 0.25 + 
+            np.array(seniority_adjustments) +
             np.array(recency_boost) + 0.10
         ) * 100
 
-    final_scores = np.clip(composite, 12.0, 97.5)
+    final_scores = np.clip(composite, 10.0, 98.0)
 
     jobs_df["response_odds_%"] = np.round(final_scores, 1)
     jobs_df["matched_skills"] = matched_skills_list

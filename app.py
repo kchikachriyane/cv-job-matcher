@@ -12,9 +12,9 @@ from matcher import (
 )
 from auto_apply import apply_to_linkedin_job
 
-# Set Page Config
+# Set Page Configuration
 st.set_page_config(
-    page_title="TALENTPULSE // Institutional Risk & Quantitative Terminal",
+    page_title="TALENTPULSE // Autonomous Quantitative & Risk Terminal",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -25,7 +25,6 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-    /* Global Foundation */
     html, body, [class*="css"] {
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
         color: #0F172A;
@@ -39,7 +38,6 @@ st.markdown("""
         background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%) !important;
     }
 
-    /* Top Executive Navigation Bar */
     .terminal-nav {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -101,7 +99,6 @@ st.markdown("""
         box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
     }
 
-    /* Executive Glass Panels */
     .dossier-card {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -124,7 +121,6 @@ st.markdown("""
         margin-bottom: 1rem;
     }
 
-    /* Mandate Posting Component */
     .job-card {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -157,7 +153,6 @@ st.markdown("""
     .job-card.tier-2::before { background: #F59E0B; }
     .job-card.tier-3::before { background: #94A3B8; }
 
-    /* Score Badges */
     .badge-odds {
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.85rem;
@@ -169,25 +164,10 @@ st.markdown("""
         gap: 0.4rem;
     }
 
-    .odds-t1 {
-        background: #ECFDF5;
-        color: #047857;
-        border: 1px solid #6EE7B7;
-    }
+    .odds-t1 { background: #ECFDF5; color: #047857; border: 1px solid #6EE7B7; }
+    .odds-t2 { background: #FFFBEB; color: #B45309; border: 1px solid #FCD34D; }
+    .odds-t3 { background: #F8FAFC; color: #475569; border: 1px solid #E2E8F0; }
 
-    .odds-t2 {
-        background: #FFFBEB;
-        color: #B45309;
-        border: 1px solid #FCD34D;
-    }
-
-    .odds-t3 {
-        background: #F8FAFC;
-        color: #475569;
-        border: 1px solid #E2E8F0;
-    }
-
-    /* Skill & Gap Taxonomy Pills */
     .pill {
         display: inline-block;
         font-family: 'JetBrains Mono', monospace;
@@ -198,17 +178,9 @@ st.markdown("""
         margin: 0.18rem;
     }
 
-    .pill-match {
-        background: #EFF6FF;
-        color: #1D4ED8;
-        border: 1px solid #BFDBFE;
-    }
-
-    .pill-gap {
-        background: #FFF1F2;
-        color: #BE123C;
-        border: 1px solid #FECDD3;
-    }
+    .pill-match { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+    .pill-gap { background: #FFF1F2; color: #BE123C; border: 1px solid #FECDD3; }
+    .pill-seniority { background: #F5F3FF; color: #6D28D9; border: 1px solid #DDD6FE; }
 
     .platform-pill {
         font-family: 'JetBrains Mono', monospace;
@@ -222,7 +194,6 @@ st.markdown("""
         border: 1px solid #CBD5E1;
     }
 
-    /* Metric Cards */
     [data-testid="stMetric"] {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -231,34 +202,19 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
     }
 
-    /* Sidebar Clean Styling */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF !important;
         border-right: 1px solid #E2E8F0 !important;
     }
-
-    /* Custom Streamlit Form Elements */
-    .stTextInput>div>div>input, .stTextArea>div>div>textarea {
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 8px !important;
-        color: #0F172A !important;
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-    }
-
-    .stTextInput>div>div>input:focus, .stTextArea>div>div>textarea:focus {
-        border-color: #2563EB !important;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Top Executive Navigation
+# Executive Navigation Bar
 st.markdown("""
 <div class="terminal-nav">
     <div class="terminal-brand">
         <h1 class="terminal-title">⚡ TALENTPULSE</h1>
-        <span class="terminal-tag">QUANTITATIVE MARKETS & RISK</span>
+        <span class="terminal-tag">QUANTITATIVE & RISK REQUISITIONS</span>
     </div>
     <div class="pulse-indicator">
         <span class="pulse-dot"></span>
@@ -267,23 +223,23 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar Mandate Configurations
+# Sidebar Jurisdictions & Parameters
 with st.sidebar:
-    st.markdown("### 🌐 Market Jurisdiction")
+    st.markdown("### 🌐 Target Economic Region")
     centre_choice = st.selectbox(
-        "Target Sovereign / Economic Bloc",
+        "Select Jurisdiction",
         list(FINANCIAL_CENTRE_MAP.keys()),
-        index=0  # Defaults to UK
+        index=0  # Defaults to United Kingdom
     )
     
-    is_remote_only = st.checkbox("Cross-Border / Remote Mandates Only", value=False)
+    is_remote_only = st.checkbox("Cross-Border / Remote Requisitions Only", value=False)
     
     st.markdown("---")
     st.markdown("### ⚙️ Crawling Parameters")
-    mandates_per_archetype = st.slider("Target depth per vector", min_value=10, max_value=35, value=15)
+    mandates_per_archetype = st.slider("Depth per search vector", min_value=10, max_value=35, value=15)
     
     recency_window = st.selectbox(
-        "Ingestion Recency Window", 
+        "Ingestion Publication Window", 
         [
             ("Past 24 Hours (Class I Direct Track)", 24), 
             ("Past 72 Hours (Standard Operating Intake)", 72), 
@@ -297,7 +253,7 @@ with st.sidebar:
     st.markdown("### ⚡ Fast-Track Dispatch")
     applicant_contact = st.text_input("Candidate Contact Phone", value="+212 ")
 
-# Input Grid: Candidate Dossier & Mandate Intent
+# Input Grid: CV Dossier & Mandate Intent
 col_cv, col_intent = st.columns([1, 1])
 
 with col_cv:
@@ -305,14 +261,14 @@ with col_cv:
 
 with col_intent:
     mandate_intent = st.text_area(
-        "2. Functional Target Archetype & Exclusions (Autonomous scan triggers on update)",
-        placeholder="e.g. Quantitative Risk Analyst, Actuarial Reserving, Solvency II, Non-Life Chain Ladder, Asset-Liability Management (ALM). Exclude non-technical advisory, sales, or IT support.",
+        "2. Functional Target Archetype, Level & Exclusions (Autonomous scan triggers on update)",
+        placeholder="e.g. Entry level or Graduate Quantitative Analyst, Actuarial Reserving, Solvency II, Python, and SQL. Exclude advisory sales or non-technical IT.",
         height=145
     )
 
 # Candidate Profile Intelligence Dossier
 if uploaded_dossier or mandate_intent.strip():
-    st.markdown("### 🗂 Candidate Quantitative Footprint & Constraints")
+    st.markdown("### 🗂 Candidate Dossier & Mandate Constraints")
     col_dossier_cv, col_dossier_intent = st.columns(2)
     
     if uploaded_dossier:
@@ -322,29 +278,33 @@ if uploaded_dossier or mandate_intent.strip():
             with st.container():
                 st.markdown("""
                 <div class="dossier-card">
-                    <div class="dossier-label">// 01. COMPUTATIONAL STACK & VERIFIED COMPETENCIES</div>
+                    <div class="dossier-label">// 01. EXTRACTED CANDIDATE PROFILE & CREDENTIALS</div>
                 """, unsafe_allow_html=True)
                 
-                st.write(f"**Identified Domain Competencies ({len(profile['skills'])} Tokens):**")
+                st.write(f"**Identified Headline:** `{profile['headline']}`")
+                st.markdown(f"**Assessed Career Stage:** <span class='pill pill-seniority'>{profile['seniority']}</span>", unsafe_allow_html=True)
+
+                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+                st.write(f"**Verified Quantitative Stack ({len(profile['skills'])} Tokens):**")
                 if profile['skills']:
                     skills_html = "".join([f'<span class="pill pill-match">{s}</span>' for s in profile['skills']])
                     st.markdown(skills_html, unsafe_allow_html=True)
                 
-                st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-                st.write("**Career Track Highlights:**")
+                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+                st.write("**Extracted Corporate Experience Track:**")
                 if profile['experience_highlights']:
                     for exp in profile['experience_highlights']:
                         st.markdown(f"- 💼 **{exp}**")
                 else:
-                    st.caption("No corporate experience records extracted.")
+                    st.caption("No standard experience entries extracted.")
 
                 if profile['education_highlights']:
-                    st.write("**Academic Credentials:**")
+                    st.write("**Academic Qualifications & Degrees:**")
                     for deg in profile['education_highlights']:
                         st.markdown(f"- 🎓 *{deg}*")
                 
                 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-                st.caption(f"Contact Verification: `{profile['email']}` | `{profile['phone']}`")
+                st.caption(f"Contact Record: `{profile['email']}` | `{profile['phone']}`")
                 st.markdown("</div>", unsafe_allow_html=True)
 
     if mandate_intent.strip():
@@ -356,9 +316,11 @@ if uploaded_dossier or mandate_intent.strip():
                     <div class="dossier-label">// 02. ACTIVE MANDATE CRITERIA & VECTOR PENALTIES</div>
                 """, unsafe_allow_html=True)
                 
-                st.write("**Jurisdiction Scope:**")
-                st.write(f"`{centre_choice}`")
+                st.write(f"**Target Jurisdiction:** `{centre_choice}`")
                 
+                if parsed_intent['requested_seniority']:
+                    st.markdown(f"**Target Seniority Filter:** <span class='pill pill-seniority'>{parsed_intent['requested_seniority']}</span>", unsafe_allow_html=True)
+
                 st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
                 st.write("**Active Functional Exclusions (Penalty Applied):**")
                 if parsed_intent['exclusions']:
@@ -372,16 +334,24 @@ if uploaded_dossier or mandate_intent.strip():
                 st.info(parsed_intent['raw_intent'])
                 st.markdown("</div>", unsafe_allow_html=True)
 
-# ----------------- AUTORUN PIPELINE ----------------- #
-if uploaded_dossier:
-    # State signature tracking changes automatically across any parameter
-    input_signature = hashlib.md5(
-        f"{uploaded_dossier.name}_{uploaded_dossier.size}_{mandate_intent.strip()}_{centre_choice}_{is_remote_only}_{recency_window[1]}_{mandates_per_archetype}".encode('utf-8')
-    ).hexdigest()
+# ----------------- REAL-TIME AUTORUN ENGINE ----------------- #
+if uploaded_dossier is not None:
+    # Construct a composite MD5 hash tracking every parameter and input
+    state_payload = (
+        f"{uploaded_dossier.name}_"
+        f"{uploaded_dossier.size}_"
+        f"{mandate_intent.strip().lower()}_"
+        f"{centre_choice}_"
+        f"{is_remote_only}_"
+        f"{recency_window[1]}_"
+        f"{mandates_per_archetype}"
+    )
+    current_signature = hashlib.md5(state_payload.encode('utf-8')).hexdigest()
 
-    if st.session_state.get("last_signature") != input_signature:
-        with st.status("⚡ Ingesting live mandates across corporate boards...", expanded=True) as status:
-            st.write("Deconstructing quantitative resume footprint...")
+    # Automatically executes whenever ANY parameter changes
+    if st.session_state.get("active_autorun_signature") != current_signature:
+        with st.status("⚡ Input change detected — Triggering autonomous re-scan...", expanded=True) as status:
+            st.write("Deconstructing candidate resume footprint & seniority level...")
             cv_text = extract_pdf_text(uploaded_dossier)
             cv_profile = parse_cv_profile(cv_text)
 
@@ -390,10 +360,8 @@ if uploaded_dossier:
             st.info(f"Active search archetypes: **{', '.join([q.title() for q in target_queries])}**")
 
             all_jobs_list = []
-            search_scope_label = centre_choice.split(" - ")[-1]
-
             for q in target_queries:
-                st.write(f"Harvesting **{q.title()}** listings in `{search_scope_label}`...")
+                st.write(f"Harvesting **{q.title()}** postings in `{centre_choice}`...")
                 df_q = fetch_platform_jobs_worldwide(
                     search_term=q,
                     location="",
@@ -406,20 +374,20 @@ if uploaded_dossier:
                     all_jobs_list.append(df_q)
 
             if not all_jobs_list:
-                status.update(label="No open requisitions identified for this scope.", state="error")
+                status.update(label="No open requisitions identified for this specific criteria.", state="error")
                 st.session_state["ranked_jobs"] = pd.DataFrame()
             else:
                 combined_jobs = pd.concat(all_jobs_list, ignore_index=True)
                 combined_jobs = combined_jobs.drop_duplicates(subset=["title", "company"], keep="first")
                 
-                st.write(f"Scoring {len(combined_jobs)} positions against the Institutional Fit Model...")
+                st.write(f"Scoring {len(combined_jobs)} positions against the updated profile...")
                 ranked_jobs = calculate_review_odds(cv_profile, mandate_intent, combined_jobs)
-                status.update(label=f"Scan complete. Ranked {len(ranked_jobs)} institutional opportunities.", state="complete")
+                status.update(label=f"Scan complete. Ranked {len(ranked_jobs)} positions.", state="complete")
                 st.session_state["ranked_jobs"] = ranked_jobs
 
-            st.session_state["last_signature"] = input_signature
+            st.session_state["active_autorun_signature"] = current_signature
 
-# Display Requisitions Ranked by Fit Score
+# Display Ranked Requisitions
 if "ranked_jobs" in st.session_state and uploaded_dossier is not None:
     ranked_jobs = st.session_state["ranked_jobs"]
 
@@ -435,12 +403,11 @@ if "ranked_jobs" in st.session_state and uploaded_dossier is not None:
         m3.metric("Class I Track (≥75%)", int((ranked_jobs['response_odds_%'] >= 75).sum()))
         m4.metric("Competitive Pool (60-74%)", int(((ranked_jobs['response_odds_%'] >= 60) & (ranked_jobs['response_odds_%'] < 75)).sum()))
 
-        # Download Export Desk
         csv_data = ranked_jobs[["title", "company", "location", "site", "date_posted", "response_odds_%", "job_url"]].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="📥 Export Current Mandate Portfolio (CSV / Excel Format)",
             data=csv_data,
-            file_name="TalentPulse_Institutional_Portfolio.csv",
+            file_name="TalentPulse_Portfolio.csv",
             mime="text/csv"
         )
 
@@ -495,7 +462,6 @@ if "ranked_jobs" in st.session_state and uploaded_dossier is not None:
                 </div>
             """, unsafe_allow_html=True)
 
-            # Taxonomy Alignment Grid
             col_m, col_g = st.columns(2)
             with col_m:
                 if matched:
@@ -504,11 +470,10 @@ if "ranked_jobs" in st.session_state and uploaded_dossier is not None:
                     st.markdown(m_html, unsafe_allow_html=True)
             with col_g:
                 if missing_kw:
-                    st.write("**ATS Vector Gap (Workday / Taleo Filters):**")
+                    st.write("**ATS Vector Gap (Keywords to Inject):**")
                     g_html = "".join([f'<span class="pill pill-gap">{s}</span>' for s in missing_kw])
                     st.markdown(g_html, unsafe_allow_html=True)
 
-            # Tailoring Action Plan Expander
             with st.expander("📝 **Institutional CV Calibration & Keyword Injectors**", expanded=False):
                 st.markdown("#### Strategic Calibration Points:")
                 for action in actions:
@@ -519,7 +484,6 @@ if "ranked_jobs" in st.session_state and uploaded_dossier is not None:
                 st.markdown("**Requisition Description Snippet:**")
                 st.write(desc[:900] + ("..." if len(desc) > 900 else ""))
 
-            # Application Dispatch Rail
             btn_col1, btn_col2 = st.columns([1, 4])
             with btn_col1:
                 if job_url and pd.notna(job_url):
