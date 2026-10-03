@@ -6,7 +6,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from jobspy import scrape_jobs
 
-# Regional Hub Configurations with Macro Fallbacks
+# Regional Hub Configurations
 FINANCIAL_CENTRE_MAP = {
     "United Kingdom": {
         "label": "United Kingdom",
@@ -40,20 +40,39 @@ FINANCIAL_CENTRE_MAP = {
     }
 }
 
-# Tier-Weighted Taxonomy (3x for Core Mathematical/Actuarial, 2x Stack, 1x Standard)
+ROLE_TYPE_KEYWORDS = {
+    "Graduate job": ["graduate", "grad", "entry level", "analyst 1", "junior analyst"],
+    "Placement": ["placement", "industrial placement", "year in industry"],
+    "Internship": ["internship", "intern", "summer analyst", "stage", "pfe"],
+    "Vacation scheme": ["vacation scheme", "spring week", "spring insight"],
+    "Insight programme": ["insight programme", "discovery week", "explore"],
+    "Training": ["training contract", "trainee", "apprenticeship"],
+    "Law training contract": ["law training contract", "trainee solicitor"],
+    "Work experience": ["work experience", "shadowing"],
+    "Casual work": ["casual", "part-time", "temporary"],
+    "Postgraduate study": ["postgraduate", "phd", "research fellowship"],
+    "Law pupillage": ["pupillage", "pupil barrister"]
+}
+
+SECTOR_KEYWORDS = {
+    "Actuarial & Insurance": ["actuarial", "reserving", "solvency", "claims", "chain ladder", "ifrs 17", "underwriting", "pricing"],
+    "Quantitative Finance & Trading": ["quantitative", "quant", "derivatives", "stochastic", "monte carlo", "vasicek", "algorithmic", "trading"],
+    "Investment Banking & Capital Markets": ["investment banking", "m&a", "capital markets", "equity research", "dcf", "valuation", "corporate finance"],
+    "Risk Analytics & Credit Risk": ["credit risk", "market risk", "basel", "counterparty", "stress testing", "var", "value at risk", "risk management"],
+    "Data Science & Machine Learning": ["data science", "machine learning", "python", "pandas", "scikit-learn", "pca", "knn", "deep learning"],
+    "Accounting & Audit": ["audit", "accounting", "aca", "acca", "tax", "financial reporting", "assurance"]
+}
+
 WEIGHTED_TAXONOMY = {
-    # Tier 1 (Weight: 3.0) — High-barrier Actuarial, Risk & Mathematical Models
     "chain ladder": 3.0, "mack": 3.0, "taylor separation": 3.0, "london chain": 3.0,
     "reserving": 3.0, "claims triangle": 3.0, "solvency ii": 3.0, "best estimate liabilities": 3.0,
     "bel": 3.0, "ibnr": 3.0, "ifrs 17": 3.0, "loss distribution": 3.0, "monte carlo": 3.0,
     "vasicek": 3.0, "stochastic": 3.0, "asset liability management": 3.0, "alm": 3.0,
     "value at risk": 3.0, "var": 3.0, "cholesky": 3.0, "basel iii": 3.0, "basel iv": 3.0,
     "stress testing": 3.0, "yield curve": 3.0, "counterparty credit risk": 3.0,
-    # Tier 2 (Weight: 2.0) — Computational Infrastructure & Machine Learning
     "python": 2.0, "r": 2.0, "sql": 2.0, "power bi": 2.0, "dax": 2.0, "pandas": 2.0,
     "numpy": 2.0, "scikit-learn": 2.0, "pca": 2.0, "mca": 2.0, "knn": 2.0,
     "c++": 2.0, "vba": 2.0, "git": 2.0, "etl pipelines": 2.0, "credit risk modeling": 2.0,
-    # Tier 3 (Weight: 1.0) — General Quantitative Core
     "excel": 1.0, "financial modeling": 1.0, "data analysis": 1.0, "reporting": 1.0,
     "portfolio analysis": 1.0, "econometrics": 1.0
 }
@@ -67,7 +86,6 @@ def tokenize(text: str) -> list:
     return re.findall(r"\b[a-zA-Z0-9_\-\.]{2,}\b", text.lower())
 
 def compute_weighted_cosine_similarity(query_text: str, doc_texts: list) -> np.ndarray:
-    """Computes TF-IDF similarity adjusted by Tier-1/2/3 quantitative weights."""
     if not doc_texts:
         return np.array([])
 
@@ -107,24 +125,43 @@ def compute_weighted_cosine_similarity(query_text: str, doc_texts: list) -> np.n
 
     return np.array(similarities)
 
-def derive_requisition_archetypes(cv_text: str, custom_intent: str) -> list:
+def derive_requisition_archetypes(cv_text: str, custom_intent: str, role_types: list = None, sectors: list = None) -> list:
     combined = f"{custom_intent} {cv_text}".lower()
     queries = []
 
-    is_early_career = any(k in combined for k in ["graduate", "junior", "entry level", "intern", "stage", "trainee", "pfe"])
-    prefix = "Junior " if is_early_career else ""
+    prefix = ""
+    if role_types:
+        first_role = role_types[0]
+        if first_role == "Graduate job":
+            prefix = "Graduate "
+        elif first_role == "Placement":
+            prefix = "Placement "
+        elif first_role == "Internship":
+            prefix = "Intern "
+        elif first_role in ["Insight programme", "Vacation scheme"]:
+            prefix = f"{first_role} "
 
-    if any(k in combined for k in ["reserving", "actuarial", "claims", "chain ladder", "solvency", "ifrs"]):
-        queries.append(f"{prefix}Actuarial Analyst".strip())
-        queries.append("Non-Life Reserving Analyst")
+    if sectors:
+        for s in sectors:
+            if s == "Actuarial & Insurance":
+                queries.append(f"{prefix}Actuarial Analyst".strip())
+                queries.append(f"{prefix}Non-Life Reserving".strip())
+            elif s == "Quantitative Finance & Trading":
+                queries.append(f"{prefix}Quantitative Analyst".strip())
+            elif s == "Risk Analytics & Credit Risk":
+                queries.append(f"{prefix}Risk Analyst".strip())
+            elif s == "Data Science & Machine Learning":
+                queries.append(f"{prefix}Data Scientist".strip())
+            elif s == "Investment Banking & Capital Markets":
+                queries.append(f"{prefix}Investment Banking Analyst".strip())
 
-    if any(k in combined for k in ["quant", "monte carlo", "alm", "vasicek", "risk model", "stochastic"]):
-        queries.append(f"{prefix}Quantitative Analyst".strip())
-        queries.append("Risk Analyst")
-
-    if any(k in combined for k in ["credit risk", "risk analytics", "power bi", "data science"]):
-        if len(queries) < 3:
-            queries.append("Quantitative Risk Analyst")
+    if not queries:
+        if any(k in combined for k in ["reserving", "actuarial", "claims", "chain ladder", "solvency", "ifrs"]):
+            queries.append(f"{prefix}Actuarial Analyst".strip())
+            queries.append(f"{prefix}Non-Life Reserving".strip())
+        if any(k in combined for k in ["quant", "monte carlo", "alm", "vasicek", "risk model", "stochastic"]):
+            queries.append(f"{prefix}Quantitative Analyst".strip())
+            queries.append(f"{prefix}Risk Analyst".strip())
 
     if not queries:
         queries = [f"{prefix}Quantitative Analyst".strip(), f"{prefix}Actuarial Analyst".strip()]
@@ -132,7 +169,6 @@ def derive_requisition_archetypes(cv_text: str, custom_intent: str) -> list:
     return list(dict.fromkeys(queries))[:3]
 
 def _scrape_single_hub(site_list, search_term, location, results_wanted, hours_old, country_indeed, is_remote):
-    """Scrapes a single hub with fault tolerance."""
     try:
         df = scrape_jobs(
             site_name=site_list,
@@ -151,19 +187,14 @@ def _scrape_single_hub(site_list, search_term, location, results_wanted, hours_o
 
 def fetch_platform_jobs_worldwide(
     search_term: str, 
-    location: str = "", 
     country_choice: str = "United Kingdom", 
     is_remote: bool = False,
     results_wanted: int = 15,
     hours_old: int = 168
 ) -> pd.DataFrame:
-    """Multi-threaded concurrent scraper across regional financial hubs."""
     region_info = FINANCIAL_CENTRE_MAP.get(country_choice, FINANCIAL_CENTRE_MAP["United Kingdom"])
     
-    if is_remote:
-        locations_to_query = ["Remote"]
-    else:
-        locations_to_query = region_info["scrape_locations"][:3]
+    locations_to_query = ["Remote"] if is_remote else region_info["scrape_locations"][:3]
 
     tasks = []
     with ThreadPoolExecutor(max_workers=min(4, len(locations_to_query))) as executor:
@@ -194,7 +225,6 @@ def fetch_platform_jobs_worldwide(
     return pd.DataFrame()
 
 def generate_institutional_tailoring(cv_skills: set, job_text: str, role_title: str, company: str) -> dict:
-    """Generates tailored CV bullets and executive cover letter text."""
     text_l = job_text.lower()
     job_skills = [s for s in WEIGHTED_TAXONOMY.keys() if s in text_l]
     missing = [s for s in job_skills if s not in cv_skills]
@@ -202,22 +232,20 @@ def generate_institutional_tailoring(cv_skills: set, job_text: str, role_title: 
     actions = []
     if missing:
         top_missing = missing[:3]
-        actions.append(f"**ATS Vector Alignment:** Inject tokens `{', '.join(top_missing)}` into your Core Competencies table.")
-        actions.append(f"**Metric-Driven Bullet Revision:** Highlight practical modeling in **{top_missing[0].upper()}** using quantitative metrics.")
+        actions.append(f"**ATS Vector Alignment:** Inject tokens `{', '.join(top_missing)}` into your Core Competencies.")
+        actions.append(f"**Metric-Driven Bullet Revision:** Highlight practical modeling in **{top_missing[0].upper()}**.")
     actions.append(f"**Executive Requisition Match:** Align your resume headline directly to **'{role_title}'**.")
 
-    # High-impact resume bullets
     b_skills = missing[:2] if missing else ["stochastic simulation", "loss reserve modeling"]
     bullets = [
         f"Engineered quantitative {b_skills[0].title()} models, stress-testing Solvency II parameters and enhancing forecast precision across multi-period horizons.",
-        f"Automated claims triangulation and reserve evaluation using Python and SQL, eliminating data friction and reducing valuation cycles by 40%.",
+        f"Automated claims triangulation and reserve evaluation using Python and SQL, reducing valuation cycles by 40%.",
         f"Synthesized comprehensive risk sensitivity analysis using {b_skills[-1].title()} methodology, reporting executive-ready findings to senior risk governance committees."
     ]
 
-    # Executive cover letter template
     cover_letter = f"""Dear Hiring Team at {company},
 
-I am writing to express my strong interest in the {role_title} position. With a strong quantitative foundation spanning non-life actuarial reserving, stochastic modeling, and risk simulation, I bring hands-on experience implementing institutional models including Chain Ladder valuation, Solvency II regulatory standards, and automated statistical pipelines.
+I am writing to express my strong interest in the {role_title} position. With a solid quantitative foundation spanning non-life actuarial reserving, stochastic modeling, and risk simulation, I bring hands-on experience implementing institutional models including Chain Ladder valuation, Solvency II regulatory standards, and automated statistical pipelines.
 
 In my recent actuarial and financial modeling work, I engineered stochastic simulations across multiple market scenarios and automated complex claims triangles utilizing Python, SQL, and Power BI. My background aligns directly with the quantitative competencies required for {role_title}, particularly in building robust, data-driven frameworks that inform risk governance and strategic capital allocation.
 
@@ -234,7 +262,6 @@ Candidate"""
     }
 
 def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFrame) -> pd.DataFrame:
-    """Calculates review odds using weighted TF-IDF, seniority checks, and exclusions."""
     if jobs_df.empty:
         return jobs_df
 
@@ -252,7 +279,6 @@ def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFra
         titles.append(t.lower())
         searchable_texts.append(f"{t} {t} {c} {d}".strip().lower())
 
-    # 1. Weighted Cosine Similarities (30% Intent, 30% CV Profile)
     if custom_intent_clean:
         intent_sim = compute_weighted_cosine_similarity(custom_intent_clean, searchable_texts)
         intent_sim = np.clip(intent_sim, 0.0, 1.0)
@@ -262,7 +288,6 @@ def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFra
     cv_sim = compute_weighted_cosine_similarity(cv_text, searchable_texts)
     cv_sim = np.clip(cv_sim, 0.0, 1.0)
 
-    # 2. Weighted Taxonomy, Seniority Adjustments & Exclusions
     taxonomy_scores = []
     seniority_adjustments = []
     matched_skills_list = []
@@ -282,7 +307,6 @@ def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFra
         taxonomy_scores.append(t_score)
         matched_skills_list.append(matched)
 
-        # Seniority Match Logic
         title_l = titles[idx]
         sen_adj = 0.0
         if any(g in cv_seniority for g in ["graduate", "junior", "intern", "entry"]):
@@ -297,7 +321,6 @@ def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFra
                 sen_adj -= 0.25
         seniority_adjustments.append(sen_adj)
 
-        # Exclusions Penalty
         penalty = 0.0
         for excl in exclusions:
             if excl in text:
@@ -314,7 +337,6 @@ def calculate_review_odds(cv_data: dict, custom_intent: str, jobs_df: pd.DataFra
         )
         tailoring_reports.append(advice)
 
-    # 3. Market Recency Boost (15%)
     recency_boost = []
     for _, row in jobs_df.iterrows():
         d_post = str(row.get("date_posted") or "").lower()
