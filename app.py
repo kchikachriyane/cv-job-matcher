@@ -32,7 +32,7 @@ def load_tracker():
 def save_tracker(df):
     df.to_csv(TRACKER_FILE, index=False)
 
-# TargetJobs Design System
+# Styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
@@ -43,23 +43,15 @@ st.markdown("""
         color: #111827;
     }
 
+    /* TargetJobs Top Header */
     .tj-navbar {
         background: #FFFFFF;
         border-bottom: 1px solid #E5E7EB;
-        padding: 0.85rem 2.5rem;
+        padding: 0.85rem 2rem;
+        margin: -4rem -5rem 1.25rem -5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin: -4rem -5rem 1.5rem -5rem;
-        position: sticky;
-        top: 0;
-        z-index: 99;
-    }
-
-    .tj-logo-group {
-        display: flex;
-        align-items: center;
-        gap: 2rem;
     }
 
     .tj-logo {
@@ -72,23 +64,20 @@ st.markdown("""
         letter-spacing: -0.03em;
     }
 
-    .tj-nav-links {
-        display: flex;
-        gap: 1.5rem;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #4B5563;
+    /* Clean navigation buttons bar */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        border: none !important;
+        background: transparent !important;
+        color: #4B5563 !important;
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        padding: 0.4rem 0.8rem !important;
     }
 
-    .tj-badge-new {
-        background: #F43F5E;
-        color: white;
-        font-size: 0.65rem;
-        font-weight: 700;
-        padding: 0.15rem 0.45rem;
-        border-radius: 9999px;
-        margin-left: 0.25rem;
-        vertical-align: middle;
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        color: #E11D48 !important;
+        background: #FFF1F2 !important;
+        border-radius: 8px !important;
     }
 
     .search-title {
@@ -106,7 +95,6 @@ st.markdown("""
         padding: 1.15rem 1.25rem;
         margin-bottom: 0.9rem;
         transition: all 0.18s ease-in-out;
-        position: relative;
     }
 
     .job-item:hover {
@@ -118,7 +106,6 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.65rem;
         font-weight: 700;
-        letter-spacing: 0.06em;
         text-transform: uppercase;
         color: #7C3AED;
         background: #F5F3FF;
@@ -175,7 +162,6 @@ st.markdown("""
         font-size: 1.3rem;
         font-weight: 800;
         font-family: 'JetBrains Mono', monospace;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
     .pill-skill {
@@ -203,44 +189,63 @@ st.markdown("""
         color: #BE123C;
         border: 1px solid #FECDD3;
     }
-
-    div[data-testid="stMultiSelect"] > label, div[data-testid="stSelectbox"] > label {
-        font-weight: 700 !important;
-        font-size: 0.85rem !important;
-        color: #374151 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Top Nav
+# 1. Top Navbar Header
 st.markdown("""
 <div class="tj-navbar">
-    <div class="tj-logo-group">
-        <div class="tj-logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E11D48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
-            targetjobs
-        </div>
-        <div class="tj-nav-links">
-            <span style="color: #111827; border-bottom: 2px solid #6366F1; padding-bottom: 0.4rem;">Jobs</span>
-            <span>Advice</span>
-            <span>Employers</span>
-            <span>Events</span>
-            <span>GradSims</span>
-            <span>✨ AI Tools <span class="tj-badge-new">NEW</span></span>
-        </div>
+    <div class="tj-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E11D48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+        targetjobs
     </div>
-    <div style="font-size: 0.88rem; font-weight: 700; color: #4F46E5; background: #EEF2FF; padding: 0.4rem 0.9rem; border-radius: 8px; border: 1px solid #C7D2FE;">
-        Autonomous Terminal Active ⚡
+    <div style="font-size: 0.82rem; font-weight: 700; color: #4F46E5; background: #EEF2FF; padding: 0.35rem 0.85rem; border-radius: 8px; border: 1px solid #C7D2FE;">
+        Autonomous Engine Active ⚡
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-tab_jobs, tab_saved = st.tabs(["💼 Jobs & Opportunities", "📌 My Saved Jobs & Tracker"])
+# 2. Interactive Navigation Action Bar
+if "nav_section" not in st.session_state:
+    st.session_state["nav_section"] = "Jobs"
 
-with tab_jobs:
+n1, n2, n3, n4, n5, n6, n7 = st.columns([1, 1, 1.2, 1, 1.1, 1.3, 1.5])
+with n1:
+    if st.button("Jobs", key="btn_nav_jobs"):
+        st.session_state["nav_section"] = "Jobs"
+        st.rerun()
+with n2:
+    if st.button("Advice", key="btn_nav_advice"):
+        st.session_state["nav_section"] = "Advice"
+        st.rerun()
+with n3:
+    if st.button("Employers", key="btn_nav_employers"):
+        st.session_state["nav_section"] = "Employers"
+        st.rerun()
+with n4:
+    if st.button("Events", key="btn_nav_events"):
+        st.session_state["nav_section"] = "Events"
+        st.rerun()
+with n5:
+    if st.button("GradSims", key="btn_nav_gradsims"):
+        st.session_state["nav_section"] = "GradSims"
+        st.rerun()
+with n6:
+    if st.button("✨ AI Tools", key="btn_nav_aitools"):
+        st.session_state["nav_section"] = "AI Tools"
+        st.rerun()
+with n7:
+    if st.button("📌 My Hub / Tracker", key="btn_nav_myhub"):
+        st.session_state["nav_section"] = "My Hub"
+        st.rerun()
+
+st.markdown("<hr style='margin: 0.5rem 0 1.5rem 0; border-color: #E5E7EB;'>", unsafe_allow_html=True)
+
+# ----------------- SECTION 1: JOBS & OPPORTUNITIES ----------------- #
+if st.session_state["nav_section"] == "Jobs":
     st.markdown('<div class="search-title">Jobs & opportunities</div>', unsafe_allow_html=True)
 
-    # 1. Search Bar Row
+    # Search Bar Row
     s_col1, s_col2 = st.columns([4, 1.2])
     with s_col1:
         mandate_intent = st.text_input(
@@ -262,9 +267,8 @@ with tab_jobs:
             label_visibility="collapsed"
         )
 
-    # 2. Four TargetJobs Filter Dropdowns Row: Role type, Location, Employer, Sector + Clear
+    # 4 Filters Row
     f_col1, f_col2, f_col3, f_col4, f_col5 = st.columns([1.5, 1.3, 1.5, 1.5, 0.7])
-    
     with f_col1:
         selected_role_types = st.multiselect(
             "Role type ⌄",
@@ -272,33 +276,27 @@ with tab_jobs:
             default=["Graduate job", "Internship"],
             placeholder="All role types"
         )
-
     with f_col2:
         selected_location = st.selectbox(
             "Location ⌄",
             list(FINANCIAL_CENTRE_MAP.keys()),
             index=0
         )
-
-    # Ingestion Data Source Setup
     existing_companies = []
     if "feed_jobs" in st.session_state and not st.session_state["feed_jobs"].empty:
         existing_companies = sorted(st.session_state["feed_jobs"]['company'].dropna().unique().tolist())
-
     with f_col3:
         selected_employers = st.multiselect(
             "Employer ⌄",
             options=existing_companies,
             placeholder="All employers"
         )
-
     with f_col4:
         selected_sectors = st.multiselect(
             "Sector ⌄",
             options=list(SECTOR_KEYWORDS.keys()),
             placeholder="All sectors"
         )
-
     with f_col5:
         st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
         if st.button("✕ Clear"):
@@ -318,7 +316,7 @@ with tab_jobs:
     ).hexdigest()
 
     if st.session_state.get("last_sig") != input_signature:
-        with st.status("⚡ Refreshing opportunities feed...", expanded=False) as status:
+        with st.status("⚡ Ingesting live requisitions...", expanded=False) as status:
             cv_profile = {"skills": [], "seniority": "Graduate", "raw_text": ""}
             cv_text = ""
             if uploaded_dossier:
@@ -349,11 +347,9 @@ with tab_jobs:
         st.session_state["last_sig"] = input_signature
 
     raw_jobs_df = st.session_state.get("feed_jobs", pd.DataFrame())
-
-    # Client-Side Filtering on the 4 TargetJobs criteria
     filtered_jobs_df = raw_jobs_df.copy()
+
     if not filtered_jobs_df.empty:
-        # Filter by Role Type
         if selected_role_types:
             r_words = []
             for rt in selected_role_types:
@@ -364,11 +360,9 @@ with tab_jobs:
                 if r_mask.sum() > 0:
                     filtered_jobs_df = filtered_jobs_df[r_mask]
 
-        # Filter by Employer
         if selected_employers:
             filtered_jobs_df = filtered_jobs_df[filtered_jobs_df['company'].isin(selected_employers)]
 
-        # Filter by Sector
         if selected_sectors:
             s_words = []
             for sec in selected_sectors:
@@ -379,16 +373,14 @@ with tab_jobs:
                 if s_mask.sum() > 0:
                     filtered_jobs_df = filtered_jobs_df[s_mask]
 
-    # Two-Column Layout Rendering
+    # Two-Column Rendering[cite: 1]
     if not filtered_jobs_df.empty:
-        st.markdown(f"<div style='font-size: 0.95rem; font-weight: 700; color: #475569; margin: 1rem 0;'>{len(filtered_jobs_df)} results found</div>", unsafe_allow_html=True)
-        
+        st.markdown(f"<div style='font-size: 0.95rem; font-weight: 700; color: #475569; margin: 0.8rem 0;'>{len(filtered_jobs_df)} results found</div>", unsafe_allow_html=True)
         col_list, col_preview = st.columns([1.1, 1.9], gap="large")
 
         if "selected_job_idx" not in st.session_state or st.session_state["selected_job_idx"] not in filtered_jobs_df.index:
             st.session_state["selected_job_idx"] = filtered_jobs_df.index[0]
 
-        # LEFT COLUMN: Jobs Feed Cards
         with col_list:
             for idx, row in filtered_jobs_df.iterrows():
                 is_selected = (st.session_state["selected_job_idx"] == idx)
@@ -417,7 +409,6 @@ with tab_jobs:
                     st.session_state["selected_job_idx"] = idx
                     st.rerun()
 
-        # RIGHT COLUMN: TargetJobs Detailed Dossier
         with col_preview:
             sel_idx = st.session_state["selected_job_idx"]
             if sel_idx in filtered_jobs_df.index:
@@ -522,8 +513,79 @@ with tab_jobs:
     else:
         st.info("No requisitions match the selected combination of filters. Try clearing filters or selecting another region.")
 
-# TAB 2: My Jobs & Pipeline Tracker
-with tab_saved:
+# ----------------- SECTION 2: ADVICE ----------------- #
+elif st.session_state["nav_section"] == "Advice":
+    st.markdown('<div class="search-title">Career Advice & Interview Playbooks</div>', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("""
+        ### 📐 Quantitative & Actuarial Technical Assessment
+        - **Reserving & Solvency II:** How to speak confidently about claims triangles, Best Estimate Liabilities (BEL), and risk margins.
+        - **Stochastic Modeling:** Preparing for Monte Carlo, Vasicek, and interest rate path simulation questions.
+        """)
+    with c2:
+        st.markdown("""
+        ### 💼 Competency & Behavioral Interviews
+        - **The STAR Method:** Structuring your analytical project stories.
+        - **Commercial Awareness:** Current rate environments, inflation impacts on P&C insurance, and banking capital regulations (Basel IV).
+        """)
+    with c3:
+        st.markdown("""
+        ### 📄 ATS Resume Optimization
+        - Why Taleo, Workday, and Brassring reject non-quantifiable bullets.
+        - The Formula: `Action Verb` + `Tool/Method` + `Context` + `Measurable Metric`.
+        """)
+
+# ----------------- SECTION 3: EMPLOYERS ----------------- #
+elif st.session_state["nav_section"] == "Employers":
+    st.markdown('<div class="search-title">Featured Institutional Employers</div>', unsafe_allow_html=True)
+    e1, e2, e3 = st.columns(3)
+    with e1:
+        st.info("### Howden Insurance\nSpecialist Insurance Broker & Underwriting. Top recruiter for motor and commercial liability.")
+        st.caption("Active in: UK, Europe, Middle East")
+    with e2:
+        st.info("### Bank of America\nGlobal Corporate & Investment Banking, Quantitative Research, and Risk Analytics.")
+        st.caption("Active in: UK, US, EMEA")
+    with e3:
+        st.info("### Dixon Wilson / Big 4\nChartered Accountancy, Actuarial Advisory & Quantitative Risk Consulting.")
+        st.caption("Active in: London, Paris")
+
+# ----------------- SECTION 4: EVENTS ----------------- #
+elif st.session_state["nav_section"] == "Events":
+    st.markdown('<div class="search-title">Upcoming Employer & Recruiting Events</div>', unsafe_allow_html=True)
+    st.markdown("""
+    - 🗓️ **TargetJobs London Finance & Actuarial Fair 2026** — *October 22, 2026* (In-person & Virtual)
+    - 🗓️ **Howden Early Careers Insight Webinar** — *November 5, 2026*
+    - 🗓️ **EMEA Quantitative Trading & Quantitative Dev Summit** — *November 18, 2026*
+    """)
+
+# ----------------- SECTION 5: GRADSIMS (JOB SIMULATIONS) ----------------- #
+elif st.session_state["nav_section"] == "GradSims":
+    st.markdown('<div class="search-title">GradSims & Virtual Job Simulations</div>', unsafe_allow_html=True)
+    st.write("Complete accredited virtual simulations to boost your profile match score:")
+    gs1, gs2 = st.columns(2)
+    with gs1:
+        st.success("### AIG Actuarial Analyst Simulation\nSimulate non-life insurance claims reserving, pricing adequacy, and exposure rating.")
+    with gs2:
+        st.success("### Bank of America Quantitative Risk Simulation\nBuild portfolio stress tests and evaluate Value at Risk (VaR) under market shocks.")
+
+# ----------------- SECTION 6: AI TOOLS ----------------- #
+elif st.session_state["nav_section"] == "AI Tools":
+    st.markdown('<div class="search-title">✨ AI Tools (Terminal Suite)</div>', unsafe_allow_html=True)
+    st.write("Specialized AI tools to automate your application workflow:")
+    t1, t2, t3 = st.columns(3)
+    with t1:
+        st.markdown("#### 1. Instant Tailoring Injector")
+        st.write("Inject missing Workday/Taleo ATS keywords into your resume bullets in one click.")
+    with t2:
+        st.markdown("#### 2. Cover Letter Synthesizer")
+        st.write("Drafts institutional 3-paragraph letters addressing specific actuarial and risk parameters.")
+    with t3:
+        st.markdown("#### 3. Autonomous Fast-Track")
+        st.write("Automated dispatch integration with Brave browser for Easy Apply requisitions.")
+
+# ----------------- SECTION 7: MY HUB / TRACKER ----------------- #
+elif st.session_state["nav_section"] == "My Hub":
     st.markdown('<div class="search-title">My Jobs & Applications Hub</div>', unsafe_allow_html=True)
     tracker_df = load_tracker()
     
