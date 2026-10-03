@@ -3,6 +3,7 @@ import pandas as pd
 import tempfile
 import os
 import hashlib
+from datetime import datetime
 from parsers import extract_pdf_text, parse_cv_profile, parse_user_intent
 from matcher import (
     fetch_platform_jobs_worldwide, 
@@ -12,7 +13,7 @@ from matcher import (
 )
 from auto_apply import apply_to_linkedin_job
 
-# Set Page Configuration
+# Set Page Config
 st.set_page_config(
     page_title="TALENTPULSE // Autonomous Quantitative & Risk Terminal",
     page_icon="⚡",
@@ -20,7 +21,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Institutional Design System (Plus Jakarta Sans + JetBrains Mono)
+TRACKER_FILE = "applications_tracker.csv"
+
+def load_tracker():
+    if os.path.exists(TRACKER_FILE):
+        return pd.read_csv(TRACKER_FILE)
+    return pd.DataFrame(columns=["title", "company", "location", "status", "applied_date", "job_url"])
+
+def save_tracker(df):
+    df.to_csv(TRACKER_FILE, index=False)
+
+# Institutional Design System
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -214,7 +225,7 @@ st.markdown("""
 <div class="terminal-nav">
     <div class="terminal-brand">
         <h1 class="terminal-title">⚡ TALENTPULSE</h1>
-        <span class="terminal-tag">QUANTITATIVE & RISK REQUISITIONS</span>
+        <span class="terminal-tag">QUANTITATIVE MARKETS & RISK TERMINAL</span>
     </div>
     <div class="pulse-indicator">
         <span class="pulse-dot"></span>
@@ -225,14 +236,14 @@ st.markdown("""
 
 # Sidebar Jurisdictions & Parameters
 with st.sidebar:
-    st.markdown("### 🌐 Target Economic Region")
+    st.markdown("### 🌐 Target Jurisdiction")
     centre_choice = st.selectbox(
-        "Select Jurisdiction",
+        "Select Macro-Region",
         list(FINANCIAL_CENTRE_MAP.keys()),
-        index=0  # Defaults to United Kingdom
+        index=0
     )
     
-    is_remote_only = st.checkbox("Cross-Border / Remote Requisitions Only", value=False)
+    is_remote_only = st.checkbox("Cross-Border / Remote Mandates Only", value=False)
     
     st.markdown("---")
     st.markdown("### ⚙️ Crawling Parameters")
@@ -253,264 +264,341 @@ with st.sidebar:
     st.markdown("### ⚡ Fast-Track Dispatch")
     applicant_contact = st.text_input("Candidate Contact Phone", value="+212 ")
 
-# Input Grid: CV Dossier & Mandate Intent
-col_cv, col_intent = st.columns([1, 1])
+# Main Tabs: Requisition Desk vs Application Tracker
+tab_matcher, tab_tracker = st.tabs(["🎯 Quantitative Requisitions Desk", "📊 Active Applications Tracker"])
 
-with col_cv:
-    uploaded_dossier = st.file_uploader("1. Candidate Resume / Academic Dossier (.PDF)", type=["pdf"])
+with tab_matcher:
+    col_cv, col_intent = st.columns([1, 1])
 
-with col_intent:
-    mandate_intent = st.text_area(
-        "2. Functional Target Archetype, Level & Exclusions (Autonomous scan triggers on update)",
-        placeholder="e.g. Entry level or Graduate Quantitative Analyst, Actuarial Reserving, Solvency II, Python, and SQL. Exclude advisory sales or non-technical IT.",
-        height=145
-    )
+    with col_cv:
+        uploaded_dossier = st.file_uploader("1. Candidate Resume / Academic Dossier (.PDF)", type=["pdf"])
 
-# Candidate Profile Intelligence Dossier
-if uploaded_dossier or mandate_intent.strip():
-    st.markdown("### 🗂 Candidate Dossier & Mandate Constraints")
-    col_dossier_cv, col_dossier_intent = st.columns(2)
-    
-    if uploaded_dossier:
-        raw_cv = extract_pdf_text(uploaded_dossier)
-        profile = parse_cv_profile(raw_cv)
-        with col_dossier_cv:
-            with st.container():
-                st.markdown("""
-                <div class="dossier-card">
-                    <div class="dossier-label">// 01. EXTRACTED CANDIDATE PROFILE & CREDENTIALS</div>
-                """, unsafe_allow_html=True)
-                
-                st.write(f"**Identified Headline:** `{profile['headline']}`")
-                st.markdown(f"**Assessed Career Stage:** <span class='pill pill-seniority'>{profile['seniority']}</span>", unsafe_allow_html=True)
-
-                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-                st.write(f"**Verified Quantitative Stack ({len(profile['skills'])} Tokens):**")
-                if profile['skills']:
-                    skills_html = "".join([f'<span class="pill pill-match">{s}</span>' for s in profile['skills']])
-                    st.markdown(skills_html, unsafe_allow_html=True)
-                
-                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-                st.write("**Extracted Corporate Experience Track:**")
-                if profile['experience_highlights']:
-                    for exp in profile['experience_highlights']:
-                        st.markdown(f"- 💼 **{exp}**")
-                else:
-                    st.caption("No standard experience entries extracted.")
-
-                if profile['education_highlights']:
-                    st.write("**Academic Qualifications & Degrees:**")
-                    for deg in profile['education_highlights']:
-                        st.markdown(f"- 🎓 *{deg}*")
-                
-                st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-                st.caption(f"Contact Record: `{profile['email']}` | `{profile['phone']}`")
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    if mandate_intent.strip():
-        parsed_intent = parse_user_intent(mandate_intent)
-        with col_dossier_intent:
-            with st.container():
-                st.markdown("""
-                <div class="dossier-card">
-                    <div class="dossier-label">// 02. ACTIVE MANDATE CRITERIA & VECTOR PENALTIES</div>
-                """, unsafe_allow_html=True)
-                
-                st.write(f"**Target Jurisdiction:** `{centre_choice}`")
-                
-                if parsed_intent['requested_seniority']:
-                    st.markdown(f"**Target Seniority Filter:** <span class='pill pill-seniority'>{parsed_intent['requested_seniority']}</span>", unsafe_allow_html=True)
-
-                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-                st.write("**Active Functional Exclusions (Penalty Applied):**")
-                if parsed_intent['exclusions']:
-                    excl_html = "".join([f'<span class="pill pill-gap">🚫 {ex}</span>' for ex in parsed_intent['exclusions']])
-                    st.markdown(excl_html, unsafe_allow_html=True)
-                else:
-                    st.caption("No functional negative constraints active.")
-                
-                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-                st.write("**Normalized Search Mandate:**")
-                st.info(parsed_intent['raw_intent'])
-                st.markdown("</div>", unsafe_allow_html=True)
-
-# ----------------- REAL-TIME AUTORUN ENGINE ----------------- #
-if uploaded_dossier is not None:
-    # Construct a composite MD5 hash tracking every parameter and input
-    state_payload = (
-        f"{uploaded_dossier.name}_"
-        f"{uploaded_dossier.size}_"
-        f"{mandate_intent.strip().lower()}_"
-        f"{centre_choice}_"
-        f"{is_remote_only}_"
-        f"{recency_window[1]}_"
-        f"{mandates_per_archetype}"
-    )
-    current_signature = hashlib.md5(state_payload.encode('utf-8')).hexdigest()
-
-    # Automatically executes whenever ANY parameter changes
-    if st.session_state.get("active_autorun_signature") != current_signature:
-        with st.status("⚡ Input change detected — Triggering autonomous re-scan...", expanded=True) as status:
-            st.write("Deconstructing candidate resume footprint & seniority level...")
-            cv_text = extract_pdf_text(uploaded_dossier)
-            cv_profile = parse_cv_profile(cv_text)
-
-            st.write("Synthesizing market search vectors...")
-            target_queries = derive_requisition_archetypes(cv_text, mandate_intent)
-            st.info(f"Active search archetypes: **{', '.join([q.title() for q in target_queries])}**")
-
-            all_jobs_list = []
-            for q in target_queries:
-                st.write(f"Harvesting **{q.title()}** postings in `{centre_choice}`...")
-                df_q = fetch_platform_jobs_worldwide(
-                    search_term=q,
-                    location="",
-                    country_choice=centre_choice,
-                    is_remote=is_remote_only,
-                    results_wanted=mandates_per_archetype,
-                    hours_old=recency_window[1]
-                )
-                if not df_q.empty:
-                    all_jobs_list.append(df_q)
-
-            if not all_jobs_list:
-                status.update(label="No open requisitions identified for this specific criteria.", state="error")
-                st.session_state["ranked_jobs"] = pd.DataFrame()
-            else:
-                combined_jobs = pd.concat(all_jobs_list, ignore_index=True)
-                combined_jobs = combined_jobs.drop_duplicates(subset=["title", "company"], keep="first")
-                
-                st.write(f"Scoring {len(combined_jobs)} positions against the updated profile...")
-                ranked_jobs = calculate_review_odds(cv_profile, mandate_intent, combined_jobs)
-                status.update(label=f"Scan complete. Ranked {len(ranked_jobs)} positions.", state="complete")
-                st.session_state["ranked_jobs"] = ranked_jobs
-
-            st.session_state["active_autorun_signature"] = current_signature
-
-# Display Ranked Requisitions
-if "ranked_jobs" in st.session_state and uploaded_dossier is not None:
-    ranked_jobs = st.session_state["ranked_jobs"]
-
-    if not ranked_jobs.empty:
-        top_score = ranked_jobs.iloc[0]['response_odds_%']
-
-        st.markdown("<hr style='border-color: #E2E8F0; margin: 2rem 0;'>", unsafe_allow_html=True)
-        
-        # Telemetry KPI Grid
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Ingested Mandates", len(ranked_jobs))
-        m2.metric("Peak Pass Probability", f"{top_score}%")
-        m3.metric("Class I Track (≥75%)", int((ranked_jobs['response_odds_%'] >= 75).sum()))
-        m4.metric("Competitive Pool (60-74%)", int(((ranked_jobs['response_odds_%'] >= 60) & (ranked_jobs['response_odds_%'] < 75)).sum()))
-
-        csv_data = ranked_jobs[["title", "company", "location", "site", "date_posted", "response_odds_%", "job_url"]].to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Export Current Mandate Portfolio (CSV / Excel Format)",
-            data=csv_data,
-            file_name="TalentPulse_Portfolio.csv",
-            mime="text/csv"
+    with col_intent:
+        mandate_intent = st.text_area(
+            "2. Target Archetype, Level & Exclusions (Autorun active)",
+            placeholder="e.g. Entry level or Graduate Quantitative Analyst, Non-Life Reserving, Solvency II, Python, and SQL. Exclude advisory sales or non-technical IT.",
+            height=145
         )
 
-        st.markdown(f"### 🎯 Requisition Scorecards ({len(ranked_jobs)} Opportunities)")
+    # Dossier Inspection Panel
+    if uploaded_dossier or mandate_intent.strip():
+        st.markdown("### 🗂 Candidate Dossier & Constraints")
+        col_dossier_cv, col_dossier_intent = st.columns(2)
+        
+        if uploaded_dossier:
+            raw_cv = extract_pdf_text(uploaded_dossier)
+            profile = parse_cv_profile(raw_cv)
+            with col_dossier_cv:
+                with st.container():
+                    st.markdown("""
+                    <div class="dossier-card">
+                        <div class="dossier-label">// 01. EXTRACTED PROFILE & CREDENTIALS</div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.write(f"**Identified Headline:** `{profile['headline']}`")
+                    st.markdown(f"**Assessed Career Stage:** <span class='pill pill-seniority'>{profile['seniority']}</span>", unsafe_allow_html=True)
 
-        for idx, row in ranked_jobs.iterrows():
-            score = row.get("response_odds_%", 0.0)
+                    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+                    st.write(f"**Verified Quantitative Stack ({len(profile['skills'])} Tokens):**")
+                    if profile['skills']:
+                        skills_html = "".join([f'<span class="pill pill-match">{s}</span>' for s in profile['skills']])
+                        st.markdown(skills_html, unsafe_allow_html=True)
+                    
+                    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+                    st.write("**Extracted Corporate Experience Track:**")
+                    if profile['experience_highlights']:
+                        for exp in profile['experience_highlights']:
+                            st.markdown(f"- 💼 **{exp}**")
+                    else:
+                        st.caption("No standard experience entries extracted.")
+
+                    if profile['education_highlights']:
+                        st.write("**Academic Qualifications:**")
+                        for deg in profile['education_highlights']:
+                            st.markdown(f"- 🎓 *{deg}*")
+                    
+                    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+                    st.caption(f"Contact Record: `{profile['email']}` | `{profile['phone']}`")
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+        if mandate_intent.strip():
+            parsed_intent = parse_user_intent(mandate_intent)
+            with col_dossier_intent:
+                with st.container():
+                    st.markdown("""
+                    <div class="dossier-card">
+                        <div class="dossier-label">// 02. ACTIVE MANDATE CRITERIA & VECTOR PENALTIES</div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.write(f"**Target Jurisdiction:** `{centre_choice}`")
+                    
+                    if parsed_intent['requested_seniority']:
+                        st.markdown(f"**Target Seniority Filter:** <span class='pill pill-seniority'>{parsed_intent['requested_seniority']}</span>", unsafe_allow_html=True)
+
+                    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+                    st.write("**Active Functional Exclusions (Penalty Applied):**")
+                    if parsed_intent['exclusions']:
+                        excl_html = "".join([f'<span class="pill pill-gap">🚫 {ex}</span>' for ex in parsed_intent['exclusions']])
+                        st.markdown(excl_html, unsafe_allow_html=True)
+                    else:
+                        st.caption("No functional negative constraints active.")
+                    
+                    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+                    st.write("**Normalized Search Mandate:**")
+                    st.info(parsed_intent['raw_intent'])
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ----------------- REAL-TIME AUTORUN ENGINE ----------------- #
+    if uploaded_dossier is not None:
+        state_payload = (
+            f"{uploaded_dossier.name}_"
+            f"{uploaded_dossier.size}_"
+            f"{mandate_intent.strip().lower()}_"
+            f"{centre_choice}_"
+            f"{is_remote_only}_"
+            f"{recency_window[1]}_"
+            f"{mandates_per_archetype}"
+        )
+        current_signature = hashlib.md5(state_payload.encode('utf-8')).hexdigest()
+
+        if st.session_state.get("active_autorun_signature") != current_signature:
+            with st.status("⚡ Input change detected — Triggering autonomous re-scan...", expanded=True) as status:
+                st.write("Deconstructing candidate resume footprint & seniority...")
+                cv_text = extract_pdf_text(uploaded_dossier)
+                cv_profile = parse_cv_profile(cv_text)
+
+                st.write("Synthesizing market search vectors...")
+                target_queries = derive_requisition_archetypes(cv_text, mandate_intent)
+                st.info(f"Active search archetypes: **{', '.join([q.title() for q in target_queries])}**")
+
+                all_jobs_list = []
+                for q in target_queries:
+                    st.write(f"Harvesting **{q.title()}** postings in `{centre_choice}` across concurrent threads...")
+                    df_q = fetch_platform_jobs_worldwide(
+                        search_term=q,
+                        location="",
+                        country_choice=centre_choice,
+                        is_remote=is_remote_only,
+                        results_wanted=mandates_per_archetype,
+                        hours_old=recency_window[1]
+                    )
+                    if not df_q.empty:
+                        all_jobs_list.append(df_q)
+
+                if not all_jobs_list:
+                    status.update(label="No open requisitions identified for this specific criteria.", state="error")
+                    st.session_state["ranked_jobs"] = pd.DataFrame()
+                else:
+                    combined_jobs = pd.concat(all_jobs_list, ignore_index=True)
+                    combined_jobs = combined_jobs.drop_duplicates(subset=["title", "company"], keep="first")
+                    
+                    st.write(f"Scoring {len(combined_jobs)} positions using Tier-Weighted TF-IDF & Taxonomy...")
+                    ranked_jobs = calculate_review_odds(cv_profile, mandate_intent, combined_jobs)
+                    status.update(label=f"Scan complete. Ranked {len(ranked_jobs)} positions.", state="complete")
+                    st.session_state["ranked_jobs"] = ranked_jobs
+
+                st.session_state["active_autorun_signature"] = current_signature
+
+    # Requisition Feed & Live Filter Controls
+    if "ranked_jobs" in st.session_state and uploaded_dossier is not None:
+        ranked_jobs = st.session_state["ranked_jobs"]
+
+        if not ranked_jobs.empty:
+            st.markdown("<hr style='border-color: #E2E8F0; margin: 2rem 0;'>", unsafe_allow_html=True)
             
-            if score >= 75:
-                rate_class = "odds-t1"
-                mandate_tier = "tier-1"
-                class_desc = "Class I — Direct Interview Track"
-            elif score >= 60:
-                rate_class = "odds-t2"
-                mandate_tier = "tier-2"
-                class_desc = "Class II — Competitive Applicant Pool"
-            else:
-                rate_class = "odds-t3"
-                mandate_tier = "tier-3"
-                class_desc = "Class III — Lateral Alignment"
+            top_score = ranked_jobs.iloc[0]['response_odds_%']
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Ingested Mandates", len(ranked_jobs))
+            m2.metric("Peak Pass Probability", f"{top_score}%")
+            m3.metric("Class I Track (≥75%)", int((ranked_jobs['response_odds_%'] >= 75).sum()))
+            m4.metric("Competitive Pool (60-74%)", int(((ranked_jobs['response_odds_%'] >= 60) & (ranked_jobs['response_odds_%'] < 75)).sum()))
 
-            title = str(row.get("title") or "Position Mandate")
-            company = str(row.get("company") or "Financial Institution")
-            platform_name = str(row.get("site") or "Corporate").title()
-            location_str = str(row.get("location") or "Target Area")
-            date_posted = str(row.get("date_posted") or "Recent")
-            job_url = row.get("job_url")
-            report = row.get("tailoring_report", {})
-            missing_kw = report.get("missing_keywords", [])
-            actions = report.get("actions", [])
-            matched = row.get("matched_skills", [])
+            # Live Interactive Filter Bar
+            st.markdown("### 🔍 Live Requisition Filters")
+            f_col1, f_col2, f_col3 = st.columns([2, 1, 1])
+            with f_col1:
+                search_query = st.text_input("Filter by Company or Keyword:", placeholder="e.g. Allianz, Barclays, Reserving, Python...")
+            with f_col2:
+                tier_filter = st.selectbox("Filter by Pass Odds Tier:", ["All Tiers", "Class I (≥75%)", "Class II (60-74%)", "Class III (<60%)"])
+            with f_col3:
+                platform_filter = st.selectbox("Platform Source:", ["All Platforms", "LinkedIn", "Indeed"])
 
-            st.markdown(f"""
-            <div class="job-card {mandate_tier}">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.9rem;">
-                    <div>
-                        <h3 style="margin: 0 0 0.35rem 0; font-size: 1.35rem; color: #0F172A; font-weight: 700; letter-spacing: -0.015em;">
-                            {title} <span style="color: #94A3B8; font-weight: 400;">/</span> <span style="color: #2563EB;">{company}</span>
-                        </h3>
-                        <div style="color: #64748B; font-size: 0.88rem; display: flex; align-items: center; gap: 0.65rem;">
-                            <span>📍 {location_str}</span>
-                            <span>•</span>
-                            <span class="platform-pill">{platform_name.upper()}</span>
-                            <span>•</span>
-                            <span>📅 {date_posted}</span>
+            # Apply Client-Side Filters
+            filtered_df = ranked_jobs.copy()
+            if search_query.strip():
+                q = search_query.strip().lower()
+                filtered_df = filtered_df[
+                    filtered_df['title'].str.lower().str.contains(q, na=False) |
+                    filtered_df['company'].str.lower().str.contains(q, na=False) |
+                    filtered_df['description'].str.lower().str.contains(q, na=False)
+                ]
+
+            if tier_filter == "Class I (≥75%)":
+                filtered_df = filtered_df[filtered_df['response_odds_%'] >= 75]
+            elif tier_filter == "Class II (60-74%)":
+                filtered_df = filtered_df[(filtered_df['response_odds_%'] >= 60) & (filtered_df['response_odds_%'] < 75)]
+            elif tier_filter == "Class III (<60%)":
+                filtered_df = filtered_df[filtered_df['response_odds_%'] < 60]
+
+            if platform_filter != "All Platforms":
+                filtered_df = filtered_df[filtered_df['site'].str.lower() == platform_filter.lower()]
+
+            st.write(f"Showing **{len(filtered_df)}** of **{len(ranked_jobs)}** requisitions.")
+
+            # Render Cards
+            for idx, row in filtered_df.iterrows():
+                score = row.get("response_odds_%", 0.0)
+                if score >= 75:
+                    rate_class, mandate_tier, class_desc = "odds-t1", "tier-1", "Class I — Direct Interview Track"
+                elif score >= 60:
+                    rate_class, mandate_tier, class_desc = "odds-t2", "tier-2", "Class II — Competitive Applicant Pool"
+                else:
+                    rate_class, mandate_tier, class_desc = "odds-t3", "tier-3", "Class III — Lateral Alignment"
+
+                title = str(row.get("title") or "Position Mandate")
+                company = str(row.get("company") or "Financial Institution")
+                platform_name = str(row.get("site") or "Corporate").title()
+                location_str = str(row.get("location") or "Target Area")
+                date_posted = str(row.get("date_posted") or "Recent")
+                job_url = row.get("job_url")
+                report = row.get("tailoring_report", {})
+                missing_kw = report.get("missing_keywords", [])
+                actions = report.get("actions", [])
+                matched = row.get("matched_skills", [])
+                tailored_bullets = report.get("tailored_bullets", [])
+                cover_letter = report.get("cover_letter", "")
+
+                st.markdown(f"""
+                <div class="job-card {mandate_tier}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.9rem;">
+                        <div>
+                            <h3 style="margin: 0 0 0.35rem 0; font-size: 1.35rem; color: #0F172A; font-weight: 700; letter-spacing: -0.015em;">
+                                {title} <span style="color: #94A3B8; font-weight: 400;">/</span> <span style="color: #2563EB;">{company}</span>
+                            </h3>
+                            <div style="color: #64748B; font-size: 0.88rem; display: flex; align-items: center; gap: 0.65rem;">
+                                <span>📍 {location_str}</span>
+                                <span>•</span>
+                                <span class="platform-pill">{platform_name.upper()}</span>
+                                <span>•</span>
+                                <span>📅 {date_posted}</span>
+                            </div>
+                        </div>
+                        <div class="badge-odds {rate_class}">
+                            <span>{score}% Pass Odds</span>
+                            <span style="opacity: 0.7; font-size: 0.75rem;">| {class_desc}</span>
                         </div>
                     </div>
-                    <div class="badge-odds {rate_class}">
-                        <span>{score}% Pass Odds</span>
-                        <span style="opacity: 0.7; font-size: 0.75rem;">| {class_desc}</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-            col_m, col_g = st.columns(2)
-            with col_m:
-                if matched:
-                    st.write("**Candidate Competencies Verified by Requisition:**")
-                    m_html = "".join([f'<span class="pill pill-match">{s}</span>' for s in matched])
-                    st.markdown(m_html, unsafe_allow_html=True)
-            with col_g:
-                if missing_kw:
-                    st.write("**ATS Vector Gap (Keywords to Inject):**")
-                    g_html = "".join([f'<span class="pill pill-gap">{s}</span>' for s in missing_kw])
-                    st.markdown(g_html, unsafe_allow_html=True)
+                col_m, col_g = st.columns(2)
+                with col_m:
+                    if matched:
+                        st.write("**Verified Competencies:**")
+                        m_html = "".join([f'<span class="pill pill-match">{s}</span>' for s in matched])
+                        st.markdown(m_html, unsafe_allow_html=True)
+                with col_g:
+                    if missing_kw:
+                        st.write("**ATS Vector Gap:**")
+                        g_html = "".join([f'<span class="pill pill-gap">{s}</span>' for s in missing_kw])
+                        st.markdown(g_html, unsafe_allow_html=True)
 
-            with st.expander("📝 **Institutional CV Calibration & Keyword Injectors**", expanded=False):
-                st.markdown("#### Strategic Calibration Points:")
-                for action in actions:
-                    st.markdown(f"- {action}")
+                # Tailored Strategy & Artifacts Drawer
+                with st.expander("📝 **Tailored Resume Bullets & Executive Cover Letter**", expanded=False):
+                    st.markdown("#### High-Impact Resume Bullets (Ready to copy into CV):")
+                    for b in tailored_bullets:
+                        st.code(b, language="text")
+
+                    st.markdown("#### Executive Cover Letter:")
+                    st.text_area("Cover Letter draft:", value=cover_letter, height=180, key=f"cl_{idx}")
+
+                    st.markdown("---")
+                    st.markdown("**Requisition Description Snippet:**")
+                    desc = str(row.get("description") or "No description available.")
+                    st.write(desc[:800] + ("..." if len(desc) > 800 else ""))
+
+                # Dispatch and Bookmark Rail
+                btn_col1, btn_col2, btn_col3 = st.columns([1.5, 2, 2.5])
+                with btn_col1:
+                    if job_url and pd.notna(job_url):
+                        st.link_button(f"🔗 Open Posting", str(job_url))
                 
-                desc = str(row.get("description") or "No description available.")
-                st.markdown("---")
-                st.markdown("**Requisition Description Snippet:**")
-                st.write(desc[:900] + ("..." if len(desc) > 900 else ""))
+                with btn_col2:
+                    if st.button("📌 Save to Application Tracker", key=f"track_btn_{idx}"):
+                        tracker_df = load_tracker()
+                        if not ((tracker_df['title'] == title) & (tracker_df['company'] == company)).any():
+                            new_row = pd.DataFrame([{
+                                "title": title,
+                                "company": company,
+                                "location": location_str,
+                                "status": "Identified",
+                                "applied_date": datetime.today().strftime('%Y-%m-%d'),
+                                "job_url": str(job_url)
+                            }])
+                            tracker_df = pd.concat([tracker_df, new_row], ignore_index=True)
+                            save_tracker(tracker_df)
+                            st.success(f"Saved '{title}' to your Tracker tab!")
+                        else:
+                            st.info("Requisition already saved in Tracker.")
 
-            btn_col1, btn_col2 = st.columns([1, 4])
-            with btn_col1:
-                if job_url and pd.notna(job_url):
-                    st.link_button(f"🔗 Open on {platform_name}", str(job_url))
-            
-            with btn_col2:
-                if platform_name.lower() == "linkedin" and job_url and pd.notna(job_url):
-                    if st.button("⚡ Fast-Track Dispatch (Brave)", key=f"auto_btn_{idx}"):
-                        with st.spinner(f"Submitting fast-track requisition for '{title}' via Brave..."):
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                                tmp.write(uploaded_dossier.getbuffer())
-                                temp_cv_path = tmp.name
+                with btn_col3:
+                    if platform_name.lower() == "linkedin" and job_url and pd.notna(job_url):
+                        if st.button("⚡ Fast-Track Dispatch (Brave)", key=f"auto_btn_{idx}"):
+                            with st.spinner(f"Submitting fast-track requisition via Brave..."):
+                                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                                    tmp.write(uploaded_dossier.getbuffer())
+                                    temp_cv_path = tmp.name
 
-                            result = apply_to_linkedin_job(
-                                job_url=str(job_url),
-                                cv_pdf_path=temp_cv_path,
-                                phone_number=applicant_contact
-                            )
+                                result = apply_to_linkedin_job(
+                                    job_url=str(job_url),
+                                    cv_pdf_path=temp_cv_path,
+                                    phone_number=applicant_contact
+                                )
+                                if os.path.exists(temp_cv_path):
+                                    os.remove(temp_cv_path)
 
-                            if os.path.exists(temp_cv_path):
-                                os.remove(temp_cv_path)
+                                if result["status"] == "Submitted":
+                                    st.success("🎉 Fast-track submission registered via Easy Apply.")
+                                else:
+                                    st.warning(f"Notice: {result['reason']}. Complete manual application via the link.")
 
-                            if result["status"] == "Submitted":
-                                st.success("🎉 Fast-track submission registered via Easy Apply.")
-                            else:
-                                st.warning(f"Notice: {result['reason']}. Complete manual application via the link.")
+                st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            st.warning("No requisitions matched this criteria. Consider widening the publication window or expanding to a broader economic area.")
 
-            st.markdown("</div>", unsafe_allow_html=True)
+# Tab 2: Persistent Kanban Application Pipeline
+with tab_tracker:
+    st.markdown("### 📊 Active Applications Pipeline")
+    tracker_df = load_tracker()
+
+    if tracker_df.empty:
+        st.info("No applications currently tracked. Click '📌 Save to Application Tracker' under any job card to begin monitoring.")
     else:
-        st.warning("No live requisitions matched this criteria. Consider widening the publication window or expanding to a broader economic area.")
+        # Pipeline Metrics
+        p1, p2, p3, p4 = st.columns(4)
+        p1.metric("Total In Pipeline", len(tracker_df))
+        p2.metric("Identified / Preparing", int((tracker_df['status'].isin(["Identified", "CV Calibrated"])).sum()))
+        p3.metric("Applied / Pending", int((tracker_df['status'] == "Applied").sum()))
+        p4.metric("Interviewing", int((tracker_df['status'] == "Interview").sum()))
+
+        st.markdown("---")
+        
+        # Interactive Status Editor
+        st.markdown("#### Manage Applications:")
+        edited_df = st.data_editor(
+            tracker_df,
+            column_config={
+                "status": st.column_config.SelectboxColumn(
+                    "Status",
+                    help="Application progression status",
+                    options=["Identified", "CV Calibrated", "Applied", "Interview", "Offer", "Archived"],
+                    required=True,
+                ),
+                "job_url": st.column_config.LinkColumn("Application Link")
+            },
+            num_rows="dynamic",
+            use_container_width=True
+        )
+
+        if st.button("💾 Save Pipeline Changes"):
+            save_tracker(edited_df)
+            st.success("Application tracker successfully updated!")
